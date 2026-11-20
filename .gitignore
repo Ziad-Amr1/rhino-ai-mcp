@@ -38,6 +38,12 @@ rhino_exec_success.txt
 *.png
 *.svg
 
+# Build & Distribution artifacts
+build/
+dist/
+*.egg-info/
+*.egg
+
 # OS / Editor files
 .DS_Store
 Thumbs.db

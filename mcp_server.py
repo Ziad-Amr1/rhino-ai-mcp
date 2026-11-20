@@ -8,7 +8,11 @@ import os
 import sys
 import logging
 from typing import Any, Dict, List, Optional
-from mcp.server.fastmcp import FastMCP
+try:
+    from mcp.server.fastmcp import FastMCP
+except (ImportError, ModuleNotFoundError):
+    from mcp.server.mcpserver import MCPServer as FastMCP
+
 
 from rhino_client import RhinoClient, DEFAULT_BRIDGE_URL
 
@@ -208,6 +212,11 @@ async def rhino_pachyderm_open_ui() -> Dict[str, Any]:
     return client.run_command("-_PachyDerm_Acoustic", echo=True)
 
 
-if __name__ == "__main__":
-    # Run the FastMCP server over standard input/output
+def main():
+    """Run the FastMCP server over standard input/output (stdio)."""
     mcp.run(transport="stdio")
+
+
+if __name__ == "__main__":
+    main()
+

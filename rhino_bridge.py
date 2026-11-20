@@ -767,14 +767,14 @@ def start_server():
         pass
 
 
-# Start the bridge server
+# Start the bridge server when run directly or inside Rhino
 if IN_RHINO:
     # Inside Rhino: run in a daemon background thread so Rhino UI stays responsive
     server_thread = threading.Thread(target=start_server)
     server_thread.daemon = True
     server_thread.start()
     print("[RhinoBridge] Rhino Agent Bridge started successfully on port {}!".format(PORT))
-else:
+elif __name__ == "__main__":
     # Standalone / test mode: keep main thread alive
     print("[RhinoBridge] Starting standalone bridge server on http://{}:{}...".format(HOST, PORT))
     print("[RhinoBridge] WARNING: Running outside Rhino process. RhinoCommon calls will be simulated.")
@@ -782,4 +782,5 @@ else:
         start_server()
     except KeyboardInterrupt:
         print("\n[RhinoBridge] Stopped.")
+
 

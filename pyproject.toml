@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -10,6 +10,18 @@ readme = "README.md"
 requires-python = ">=3.9"
 authors = [
     { name = "Ziad Amr" }
+]
+keywords = [
+    "rhino",
+    "rhino3d",
+    "rhino8",
+    "rhinoceros",
+    "mcp",
+    "model-context-protocol",
+    "ai-agent",
+    "antigravity",
+    "cad-automation",
+    "computational-design"
 ]
 dependencies = [
     "mcp>=1.0.0",
@@ -23,6 +35,18 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Interface Engine/Protocol Translator",
 ]
 
+[project.scripts]
+rhino-mcp = "mcp_server:main"
+rhino-cli = "rhino_client:main"
+
 [project.urls]
 Homepage = "https://github.com/Ziad-Amr1/rhino-ai-mcp"
 Repository = "https://github.com/Ziad-Amr1/rhino-ai-mcp"
+Issues = "https://github.com/Ziad-Amr1/rhino-ai-mcp/issues"
+
+[tool.setuptools]
+py-modules = ["mcp_server", "rhino_bridge", "rhino_client", "run_backend"]
+packages = ["mcp_schemas"]
+
+[tool.setuptools.package-data]
+mcp_schemas = ["*.json", "*.md"]

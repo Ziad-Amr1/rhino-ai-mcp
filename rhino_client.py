@@ -129,10 +129,11 @@ class RhinoClient:
         })
 
 
-if __name__ == "__main__":
+def main():
+    """Command-line interface for Rhino Live Bridge."""
     client = RhinoClient()
     if len(sys.argv) < 2:
-        print("Usage: python rhino_client.py [status|layers|objects|selected|run <file.py>|cmd <command>]")
+        print("Usage: rhino-cli [status|layers|objects|selected|run <file.py>|cmd <command>]")
         sys.exit(0)
 
     cmd = sys.argv[1].lower()
@@ -153,3 +154,8 @@ if __name__ == "__main__":
         print(json.dumps(client.execute_python(script_code), indent=2))
     else:
         print(f"Unknown command: {cmd}")
+
+
+if __name__ == "__main__":
+    main()
+
