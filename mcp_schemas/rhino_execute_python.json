@@ -1,0 +1,1 @@
+{"name":"rhino_execute_python","description":"Execute arbitrary Python code inside Rhino with full access to rhinoscriptsyntax (as rs), RhinoCommon (as Rhino/rg), and active document (doc). Returns stdout, stderr, and result.","parameters":null}

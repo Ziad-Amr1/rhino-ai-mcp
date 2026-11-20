@@ -1,0 +1,1 @@
+{"name":"rhino_get_selected_objects","description":"Get all currently selected objects in Rhino with their GUIDs, types, layers, and bounding boxes.","parameters":null}

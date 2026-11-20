@@ -1,0 +1,38 @@
+﻿# Python virtual environment
+.venv/
+venv/
+env/
+ENV/
+
+# Python cache & compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.log
+.pytest_cache/
+
+# Large binary models (Rhino 3DM)
+*.3dm
+*.3dmbak
+*.bak
+
+# Large binary archives & heavy packages
+*.zip
+*.tar.gz
+*.7z
+FINAL_SCENARIO_E_COMPLETE_ENGINEERING_PACKAGE/
+Improved_Acoustic_System/
+reports/
+
+# Video and animation exports
+*.mp4
+*.gif
+*.avi
+
+# OS / Editor files
+.DS_Store
+Thumbs.db
+~$*
+*.tmp
+.idea/
+.vscode/

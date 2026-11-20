@@ -1,0 +1,1 @@
+{"name":"rhino_query_objects","description":"Query objects in active Rhino document by layer name, geometry type (Brep, Curve, Mesh, Point, SubD), or selection.","parameters":null}

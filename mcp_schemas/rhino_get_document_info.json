@@ -1,0 +1,1 @@
+{"name":"rhino_get_document_info","description":"Get active Rhino document information, including unit system, absolute tolerance, angle tolerance, and active view.","parameters":null}
