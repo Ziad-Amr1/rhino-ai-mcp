@@ -11,6 +11,10 @@ __pycache__/
 *.log
 .pytest_cache/
 
+# Local Project Archives & Working Files (preserved locally, ignored by Git)
+project-archive/
+local-work/
+
 # Large binary models (Rhino 3DM)
 *.3dm
 *.3dmbak
@@ -28,6 +32,11 @@ reports/
 *.mp4
 *.gif
 *.avi
+
+# Test outputs
+rhino_exec_success.txt
+*.png
+*.svg
 
 # OS / Editor files
 .DS_Store
