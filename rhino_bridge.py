@@ -98,15 +98,20 @@ try:
 except ImportError:
     HAS_RHINO3DM = False
 
-IMPROVED_MODEL_PATH = os.path.join(os.path.dirname(__file__), "Improved_Acoustic_System", "Muhammad_Ali_Mosque_Acoustic_Improved.3dm")
-if not os.path.exists(IMPROVED_MODEL_PATH):
-    IMPROVED_MODEL_PATH = os.path.join(os.path.dirname(__file__), "Muhammad_Ali_Mosque_Acoustic_Improved.3dm")
+# Standalone 3DM model path (configurable via RHINO_MODEL_PATH env var)
+STANDALONE_MODEL_PATH = os.environ.get("RHINO_MODEL_PATH", "")
+if not STANDALONE_MODEL_PATH or not os.path.exists(STANDALONE_MODEL_PATH):
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    for f in os.listdir(current_dir):
+        if f.lower().endswith(".3dm") and not f.startswith("~$"):
+            STANDALONE_MODEL_PATH = os.path.join(current_dir, f)
+            break
 
 STANDALONE_DOC = None
-if not IN_RHINO and HAS_RHINO3DM and os.path.exists(IMPROVED_MODEL_PATH):
+if not IN_RHINO and HAS_RHINO3DM and STANDALONE_MODEL_PATH and os.path.exists(STANDALONE_MODEL_PATH):
     try:
-        print("[RhinoBridge] Loading verified 3DM model from: {}".format(IMPROVED_MODEL_PATH))
-        STANDALONE_DOC = rhino3dm.File3dm.Read(IMPROVED_MODEL_PATH)
+        print("[RhinoBridge] Loading standalone 3DM model from: {}".format(STANDALONE_MODEL_PATH))
+        STANDALONE_DOC = rhino3dm.File3dm.Read(STANDALONE_MODEL_PATH)
         print("[RhinoBridge] Loaded {} objects and {} layers from 3DM!".format(len(STANDALONE_DOC.Objects), len(STANDALONE_DOC.Layers)))
     except Exception as e:
         print("[RhinoBridge] Failed to load 3DM: {}".format(e))
@@ -145,15 +150,16 @@ def get_doc_summary():
     """Returns active document information."""
     if not IN_RHINO:
         if STANDALONE_DOC:
+            model_name = os.path.basename(STANDALONE_MODEL_PATH) if STANDALONE_MODEL_PATH else "Standalone_Model.3dm"
             return {
                 "status": "connected",
                 "mode": "standalone_3dm_verified",
-                "message": "Bridge connected to verified 3DM model (Muhammad_Ali_Mosque_Acoustic_Improved.3dm)",
-                "rhino_version": "Rhino 9.x (OpenNURBS 8.35 / rhino3dm verified)",
+                "message": "Bridge connected to standalone 3DM model ({})".format(model_name),
+                "rhino_version": "Rhino Standalone (OpenNURBS / rhino3dm verified)",
                 "build_date": "2026-11-20",
                 "document": {
-                    "name": "Muhammad_Ali_Mosque_Acoustic_Improved.3dm",
-                    "path": IMPROVED_MODEL_PATH,
+                    "name": model_name,
+                    "path": STANDALONE_MODEL_PATH,
                     "model_unit_system": "Meters",
                     "distance_tolerance": 0.001,
                     "angle_tolerance_degrees": 1.0,
@@ -164,7 +170,7 @@ def get_doc_summary():
                     "total_objects": len(STANDALONE_DOC.Objects),
                     "selected_objects": 0,
                     "layers": len(STANDALONE_DOC.Layers),
-                    "materials": 6
+                    "materials": 0
                 }
             }
         selected_cnt = len([o for o in MOCK_OBJECTS if o.get("selected")])

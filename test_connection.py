@@ -1,6 +1,7 @@
 """Test connection to the Rhino Live Agent Bridge."""
 
 import sys
+import os
 from rhino_client import RhinoClient
 
 def main():
@@ -23,7 +24,8 @@ def main():
         print("\n[DISCONNECTED] Rhino Live Bridge is not running.")
         print("To start the bridge:")
         print("  1. In Rhino, type into the command line:")
-        print(r'     -_RunPythonScript "E:\course\03_Programming_Data\AI\Projects\rhino\rhino_bridge.py"')
+        script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "rhino_bridge.py"))
+        print(f'     -_RunPythonScript "{script_path}"')
         print("  2. Or open rhino_bridge.py in Rhino ScriptEditor (command: ScriptEditor) and click Run (Play).")
         if "details" in status:
             print(f"Error details: {status['details']}")

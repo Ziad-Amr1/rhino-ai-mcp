@@ -1,6 +1,6 @@
 """Rhino AI Model Context Protocol (MCP) Server.
 
-Enables AI clients (Google Antigravity, OpenCode, Claude Desktop, Cursor)
+Enables AI clients (Google Antigravity, Claude Desktop, Cursor, OpenCode)
 to interact directly with Rhinoceros 3D (Rhino 8 & 9) through standard MCP protocol.
 """
 
@@ -11,9 +11,6 @@ from typing import Any, Dict, List, Optional
 from mcp.server.fastmcp import FastMCP
 
 from rhino_client import RhinoClient, DEFAULT_BRIDGE_URL
-import pachyderm_materials
-import pachyderm_simulation
-from mosque_acoustic_data import ACOUSTIC_SOURCES, ACOUSTIC_RECEIVERS, ACOUSTIC_MATERIALS
 
 # Configure logging to stderr so stdout is strictly preserved for JSON-RPC stdio
 logging.basicConfig(
@@ -33,7 +30,8 @@ mcp = FastMCP(
         "Use read-only tools (rhino_get_connection_status, rhino_get_document_info, rhino_list_layers, "
         "rhino_query_objects, rhino_get_selected_objects) to inspect models, layers, and objects. "
         "Use rhino_execute_python to run RhinoCommon or rhinoscriptsyntax code. "
-        "Use rhino_create_geometry and rhino_run_command to generate models and execute Rhino commands."
+        "Use rhino_create_geometry and rhino_run_command to generate models and execute Rhino commands. "
+        "Use rhino_capture_viewport to take screenshots of the active viewport."
     )
 )
 
@@ -48,8 +46,8 @@ async def rhino_get_connection_status() -> Dict[str, Any]:
         return {
             "status": "disconnected",
             "message": (
-                "Cannot connect to Rhino Live Bridge. To connect, open Rhino and run the bridge script: "
-                "in Rhino command line run: -_RunPythonScript \"E:\\course\\03_Programming_Data\\AI\\Projects\\rhino\\rhino_bridge.py\" "
+                "Cannot connect to Rhino Live Bridge. To connect, open Rhino and run rhino_bridge.py: "
+                "In Rhino command line run: -_RunPythonScript \"<path_to>/rhino_bridge.py\" "
                 "or open rhino_bridge.py in Rhino's ScriptEditor and press Run."
             ),
             "details": res.get("error")
@@ -165,53 +163,49 @@ async def rhino_capture_viewport(
 
 
 # ==============================================================================
-# PACHYDERM ACOUSTIC SIMULATION TOOLS (MUHAMMAD ALI MOSQUE)
+# GENERAL COMPUTATIONAL ACOUSTICS EXTENSION TOOLS
 # ==============================================================================
 
-@mcp.tool(name="rhino_pachyderm_register_materials")
-async def rhino_pachyderm_register_materials() -> Dict[str, Any]:
-    """Register verified acoustic materials for the Muhammad Ali Mosque in Pachyderm's native material library."""
-    success = pachyderm_materials.register_mosque_materials_in_pachyderm()
-    return {
-        "success": success,
-        "registered_materials": list(ACOUSTIC_MATERIALS.keys()),
-        "library_path": pachyderm_materials.PACH_LIB_PATH
-    }
-
-
-@mcp.tool(name="rhino_pachyderm_calculate_rt60")
-async def rhino_pachyderm_calculate_rt60(
-    occupied: bool = False,
-    volume_m3: Optional[float] = None
+@mcp.tool(name="rhino_calculate_rt60")
+async def rhino_calculate_rt60(
+    volume_m3: float,
+    total_surface_area_m2: float,
+    absorption_coefficients: Dict[str, float]
 ) -> Dict[str, Any]:
-    """Calculate analytical Sabine & Eyring Reverberation Time (T60), C50, C80, and STI for the Muhammad Ali Mosque across all octave bands."""
-    return pachyderm_simulation.calculate_analytical_acoustics(volume_m3=volume_m3, occupied=occupied)
+    """Calculate general room reverberation time (Sabine and Eyring equations) for any architectural space.
 
+    Args:
+        volume_m3: Total room enclosure volume in cubic meters.
+        total_surface_area_m2: Total interior surface area in square meters.
+        absorption_coefficients: Dictionary mapping material/surface names to absorption values (alpha 0.0 to 1.0).
+    """
+    import math
+    if volume_m3 <= 0 or total_surface_area_m2 <= 0:
+        return {"error": "Volume and surface area must be positive numbers."}
 
-@mcp.tool(name="rhino_pachyderm_get_transducers")
-async def rhino_pachyderm_get_transducers() -> Dict[str, Any]:
-    """Get list of acoustic sound sources (Imam, Khatib, Muezzin) and 16 receivers across the mosque prayer hall and galleries."""
+    total_sabins = sum(absorption_coefficients.values())
+    mean_alpha = max(0.001, min(0.999, total_sabins / total_surface_area_m2))
+
+    # Sabine Formula: T60 = 0.161 * V / A
+    t60_sabine = (0.161 * volume_m3) / max(0.1, total_sabins)
+
+    # Eyring Formula: T60 = -0.161 * V / (S * ln(1 - alpha_bar))
+    t60_eyring = (-0.161 * volume_m3) / (total_surface_area_m2 * math.log(1.0 - mean_alpha))
+
     return {
-        "sources": ACOUSTIC_SOURCES,
-        "receivers": ACOUSTIC_RECEIVERS,
-        "counts": {
-            "sources": len(ACOUSTIC_SOURCES),
-            "receivers": len(ACOUSTIC_RECEIVERS)
-        }
+        "volume_m3": volume_m3,
+        "total_surface_area_m2": total_surface_area_m2,
+        "total_absorption_sabins": round(total_sabins, 2),
+        "mean_absorption_alpha": round(mean_alpha, 4),
+        "t60_sabine_seconds": round(t60_sabine, 3),
+        "t60_eyring_seconds": round(t60_eyring, 3)
     }
-
-
-@mcp.tool(name="rhino_pachyderm_setup_mosque")
-async def rhino_pachyderm_setup_mosque() -> Dict[str, Any]:
-    """Deploy acoustic layers, sound sources, and receivers for the Muhammad Ali Mosque in the active Rhino model via live bridge."""
-    return pachyderm_simulation.deploy_mosque_acoustics_via_bridge(client=client)
 
 
 @mcp.tool(name="rhino_pachyderm_open_ui")
 async def rhino_pachyderm_open_ui() -> Dict[str, Any]:
     """Launch the Pachyderm Acoustic Simulation interface inside Rhinoceros 3D."""
     return client.run_command("-_PachyDerm_Acoustic", echo=True)
-
 
 
 if __name__ == "__main__":

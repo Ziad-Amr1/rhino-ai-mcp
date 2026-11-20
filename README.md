@@ -1,127 +1,301 @@
-# Rhino AI Live Bridge & MCP Integration
+# Rhino AI Model Context Protocol (MCP) Toolkit
 
-Connect **Google Antigravity**, **Cursor**, **Claude Desktop**, and other AI agent clients directly to **Rhinoceros 3D** (Rhino 8 & 9).
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python: 3.9+](https://img.shields.io/badge/Python-3.9%2B-blue.svg)](https://www.python.org/)
+[![Rhino: 8 & 9](https://img.shields.io/badge/Rhinoceros-8%20%7C%209-red.svg)](https://www.rhino3d.com/)
+[![MCP Compliant](https://img.shields.io/badge/MCP-1.0-green.svg)](https://modelcontextprotocol.io/)
 
----
+A general-purpose **Model Context Protocol (MCP)** server and live bidirectional bridge for **McNeel Rhinoceros 3D** (Rhino 8 & 9).
 
-## Architecture Overview
-
-```
-+------------------------------------+           +---------------------------------------+
-|  AI Agent / Antigravity            |           |  Rhinoceros 3D (Rhino 8 / 9)          |
-|                                    |           |                                       |
-|  - MCP Server (mcp_server.py)      | JSON-RPC  |  - rhino_bridge.py                    |
-|    stdio / FastMCP                 | HTTP REST |    Live daemon thread on port 9888    |
-|    Discovers & calls tools         |<--------->|    Safely executes on Rhino UI thread |
-|                                    |   :9888   |    Full RhinoCommon & rhinoscript     |
-|  - Python Client (rhino_client.py) |           |                                       |
-+------------------------------------+           +---------------------------------------+
-```
+Connect AI agent workflows—including **Google Antigravity**, **Claude Desktop**, **Cursor**, **VS Code**, and custom LLM orchestrators—directly to Rhino's geometry engine, active document state, and command pipeline.
 
 ---
 
-## Quick Start: Starting the Bridge in Rhino
+## Architecture
 
-You only need to run `rhino_bridge.py` once per Rhino session (or set it to start automatically on startup).
+```
++-------------------------------------------------------+
+|  AI Agent / LLM Client                                |
+|  (Google Antigravity, Claude Desktop, Cursor, etc.)  |
++-------------------------------------------------------+
+                           |
+                     stdio | (JSON-RPC 2.0 / MCP Protocol)
+                           v
++-------------------------------------------------------+
+|  FastMCP Server (mcp_server.py)                       |
+|  - Tool discovery & schema generation                 |
+|  - Parameter validation (Pydantic)                    |
+|  - Client proxy (rhino_client.py)                     |
++-------------------------------------------------------+
+                           |
+                      HTTP | REST API (http://127.0.0.1:9888)
+                           v
++-------------------------------------------------------+
+|  Rhino Live Agent Bridge (rhino_bridge.py)            |
+|  - Embedded daemon running inside Rhino 8 / 9         |
+|  - Dispatches tasks to Rhino Main UI Thread           |
+|  - Full access to RhinoCommon, rs, and RhinoDoc       |
+|  - Headless standalone fallback mode (via rhino3dm)   |
++-------------------------------------------------------+
+```
 
-### Option 1: One Command in Rhino (Fastest)
-In Rhino's top command line, paste and hit **Enter**:
+---
+
+## Key Features
+
+- **Live Bidirectional Bridge:** Control Rhino in real time via an embedded daemon thread on port `9888`.
+- **UI Thread Safety:** All geometry and document operations execute safely on Rhino's main UI thread.
+- **Document & Layer Inspection:** Query model units, bounding boxes, viewports, layer hierarchies, colors, and visibility.
+- **Object Filtering & Querying:** Search and filter objects by layer, geometry type (`Brep`, `Curve`, `Mesh`, `SubD`, `Point`), or selection state.
+- **Parametric Geometry Generation:** Create parametric primitives (`box`, `cylinder`, `sphere`, `line`, `point`) with a single tool call.
+- **Arbitrary Python Execution:** Execute arbitrary Python code inside Rhino with pre-injected `Rhino`, `rg` (`Rhino.Geometry`), `rs` (`rhinoscriptsyntax`), and `doc` (`RhinoDoc.ActiveDoc`).
+- **Rhino Command Execution:** Execute any native Rhino command string (e.g., `_Circle`, `_ExtrudeCrv`, `_ZoomAll`).
+- **Viewport Screenshot Capture:** Capture high-resolution viewport screenshots and save them directly to disk.
+- **Acoustic RT60 Calculator:** Built-in Sabine and Eyring reverberation time calculations for architectural enclosures.
+- **Standalone Emulation Mode:** Operates outside Rhino via `rhino3dm` for automated testing, CI/CD, and offline development.
+
+---
+
+## Quick Start
+
+### 1. Installation
+
+Clone the repository and install the dependencies in your Python environment (Python 3.9+ recommended):
+
+```bash
+git clone https://github.com/Ziad-Amr1/rhino-ai-mcp.git
+cd rhino-ai-mcp
+pip install -e .
+```
+
+Or install using `requirements.txt`:
+
+```bash
+pip install -r requirements.txt
+```
+
+### 2. Launch the Bridge Inside Rhino
+
+To connect to a live Rhino session, run `rhino_bridge.py` inside Rhino:
+
+#### Option A: Rhino Command Line (Fastest)
+In Rhino's command bar, run:
 ```text
--_RunPythonScript "E:\course\03_Programming_Data\AI\Projects\rhino\rhino_bridge.py"
+-_RunPythonScript "C:\path\to\rhino-ai-mcp\rhino_bridge.py"
 ```
 
-### Option 2: Script Editor (Visual)
-1. In Rhino, run the command: `ScriptEditor` (or `EditPythonScript`).
-2. Open file: `E:\course\03_Programming_Data\AI\Projects\rhino\rhino_bridge.py`.
-3. Click the green **Run (Play)** button (or press `F5`).
-4. The Rhino command line will output:
-   ```text
-   [RhinoBridge] Rhino Agent Bridge started successfully on port 9888!
-   ```
+#### Option B: Rhino ScriptEditor
+1. Type `ScriptEditor` (Rhino 8+) or `EditPythonScript`.
+2. Open `rhino_bridge.py`.
+3. Press **Run** (`F5`).
 
-### Option 3: Auto-Start Every Time Rhino Opens (Recommended)
-1. In Rhino, go to **Tools** > **Options** (or type `Options`).
-2. Navigate to **General** > **Command Lists**.
+#### Option C: Auto-Start on Rhino Launch (Recommended)
+1. In Rhino, open **Options** (`Tools > Options` or type `Options`).
+2. Go to **General** > **Command Lists**.
 3. Under **Run these commands every time Rhino starts**, add:
    ```text
-   -_RunPythonScript "E:\course\03_Programming_Data\AI\Projects\rhino\rhino_bridge.py"
+   -_RunPythonScript "C:\path\to\rhino-ai-mcp\rhino_bridge.py"
    ```
-4. Click **OK**. The bridge will now silently launch in the background every time you open Rhino!
+4. Click **OK**. The bridge will start automatically whenever Rhino opens.
 
----
+### 3. Verify Connection
 
-## Verifying Connection
+Check the connection from your terminal:
 
-Run the connection tester from PowerShell or terminal:
-```powershell
-& "E:\course\03_Programming_Data\AI\Projects\rhino\.venv\Scripts\python.exe" "E:\course\03_Programming_Data\AI\Projects\rhino\test_connection.py"
+```bash
+python test_connection.py
+```
+
+Expected output:
+```text
+Testing connection to Rhino Live Bridge at http://127.0.0.1:9888...
+
+[SUCCESS] Connected to Rhino Live Bridge!
+Rhino Version: Rhino 8.x / 9.x
+Document Name: Untitled.3dm
+Unit System:   Millimeters
+Active View:   Perspective
+Objects:       0 (Selected: 0)
+Layers:        1
 ```
 
 ---
 
-## MCP Tools Available to Antigravity
+## AI Client Configuration
 
-When configured in `~/.gemini/config/mcp_config.json`, the following tools are available to the AI agent:
+### Google Antigravity / Gemini CLI
 
-| Tool Name | Type | Description |
-| :--- | :--- | :--- |
-| `rhino_get_connection_status` | Read | Checks if Rhino bridge is online and returns document/object counts |
-| `rhino_get_document_info` | Read | Retrieves unit system, tolerances, active viewport, and modified status |
-| `rhino_list_layers` | Read | Lists all layers with colors, visibility, and lock status |
-| `rhino_query_objects` | Read | Searches objects by layer, geometry type (Brep, Curve, Mesh, SubD), or selection |
-| `rhino_get_selected_objects` | Read | Returns currently selected objects in Rhino |
-| `rhino_select_objects` | Write | Selects or deselects objects by GUID |
-| `rhino_delete_objects` | Write | Deletes objects by GUID |
-| `rhino_run_command` | Write | Executes any native Rhino command string (e.g. `_Line`, `_ExtrudeCrv`) |
-| `rhino_create_geometry` | Write | Creates parametric primitives (box, cylinder, sphere, line, point) |
-| `rhino_execute_python` | Write | Executes arbitrary Python code with full access to `RhinoCommon` & `rhinoscriptsyntax` |
-| `rhino_capture_viewport` | Read | Takes a high-resolution screenshot of the active viewport and saves to disk |
-| `rhino_pachyderm_register_materials`| Write | Synchronizes verified mosque materials into Pachyderm's native material library |
-| `rhino_pachyderm_setup_mosque` | Write | Deploys acoustic layers, 3 sound sources, and 16 receivers into active Rhino model |
-| `rhino_pachyderm_calculate_rt60` | Read | Computes Sabine & Eyring T60, C50, C80, and STI curves across all octave bands |
-| `rhino_pachyderm_get_transducers` | Read | Retrieves coordinates and sound power specs for Imam, Khatib, Muezzin, and receivers |
-| `rhino_pachyderm_open_ui` | Action | Opens Pachyderm's Geometrical Acoustics control panel inside Rhino |
+Add the server to your `~/.gemini/config/mcp_config.json`:
 
----
-
-## Pachyderm Acoustic Simulation: Muhammad Ali Mosque
-
-Pachyderm Acoustic Simulation (v2.7.0.0) is configured to simulate the monumental prayer hall ($V = 39,840 \text{ m}^3$):
-
-1. **Materials Registered in Pachyderm Library**:
-   - `Polished Marble / Alabaster Revetment` ($\alpha = [0.01 - 0.03]$, $s=0.05$)
-   - `Structural Dressed Limestone` ($\alpha = [0.02 - 0.05]$, $s=0.20$)
-   - `Historic Lime / Gypsum Plaster` ($\alpha = [0.02 - 0.05]$, $s=0.15$)
-   - `Wool Prayer Carpet on Underlay` ($\alpha = [0.05 - 0.65]$, $s=0.10$)
-   - `Laminated Safety Glass (8mm)` ($\alpha = [0.18 - 0.02]$, $s=0.05$)
-   - `Carved Hardwood` ($\alpha = [0.14 - 0.06]$, $s=0.25$)
-
-2. **Sound Sources**:
-   - `SRC_IMAM_MIHRAB` at `(0.0, 18.5, 1.5)` (74 dB)
-   - `SRC_KHATIB_MINBAR` at `(2.8, 17.0, 3.2)` (76 dB)
-   - `SRC_MUEZZIN_DIKKA` at `(0.0, -8.0, 4.5)` (78 dB)
-
-3. **Receivers**:
-   - 16 listening positions across prayer carpet floor ($Z = 1.20\text{ m}$) and upper women's galleries ($Z = 9.50\text{ m}$).
-
-4. **Run Simulation**:
-   ```powershell
-   .\.venv\Scripts\python.exe pachyderm_simulation.py
-   ```
-
-
----
-
-## Project Structure
-
+```json
+{
+  "mcpServers": {
+    "rhino": {
+      "command": "python",
+      "args": [
+        "C:/path/to/rhino-ai-mcp/mcp_server.py"
+      ],
+      "env": {
+        "RHINO_BRIDGE_URL": "http://127.0.0.1:9888"
+      }
+    }
+  }
+}
 ```
-E:\course\03_Programming_Data\AI\Projects\rhino\
-├── .venv/                   # Python virtual environment (FastMCP, HTTP, Pydantic)
-├── rhino_bridge.py          # The live server script executed inside Rhino
-├── rhino_client.py          # Python SDK & CLI client
-├── mcp_server.py            # FastMCP Server communicating over stdio JSON-RPC
-├── test_connection.py       # Quick test script to verify bridge connectivity
+
+### Claude Desktop
+
+Add to `%APPDATA%\Claude\claude_desktop_config.json` (Windows) or `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS):
+
+```json
+{
+  "mcpServers": {
+    "rhino": {
+      "command": "python",
+      "args": [
+        "C:/path/to/rhino-ai-mcp/mcp_server.py"
+      ],
+      "env": {
+        "RHINO_BRIDGE_URL": "http://127.0.0.1:9888"
+      }
+    }
+  }
+}
+```
+
+### Cursor
+
+Add to your project's `.cursor/mcp.json` or global Cursor settings:
+
+```json
+{
+  "mcpServers": {
+    "rhino": {
+      "command": "python",
+      "args": [
+        "${workspaceFolder}/mcp_server.py"
+      ],
+      "env": {
+        "RHINO_BRIDGE_URL": "http://127.0.0.1:9888"
+      }
+    }
+  }
+}
+```
+
+---
+
+## MCP Tools Reference
+
+| Tool Name | Type | Description | Key Parameters |
+| :--- | :---: | :--- | :--- |
+| `rhino_get_connection_status` | Read | Checks if Rhino bridge is online and returns document overview | — |
+| `rhino_get_document_info` | Read | Retrieves unit system, tolerances, and active viewport | — |
+| `rhino_list_layers` | Read | Lists all layers with colors, visibility, and lock status | — |
+| `rhino_query_objects` | Read | Searches objects by layer, geometry type, or selection | `layer`, `geometry_type`, `selected_only`, `limit` |
+| `rhino_get_selected_objects` | Read | Returns GUIDs and metadata of currently selected objects | — |
+| `rhino_select_objects` | Write | Selects or deselects objects by GUID | `guids`, `deselect_others` |
+| `rhino_delete_objects` | Write | Deletes objects by GUID | `guids` |
+| `rhino_create_geometry` | Write | Creates parametric primitives (`box`, `cylinder`, `sphere`, `line`, `point`) | `geometry_type`, `origin`, `size`, `radius`, `height` |
+| `rhino_run_command` | Write | Executes any native Rhino command string | `command`, `echo` |
+| `rhino_execute_python` | Write | Runs Python script in Rhino with access to `RhinoCommon` & `rs` | `code` |
+| `rhino_capture_viewport` | Read | Captures a high-resolution screenshot of active viewport | `file_path`, `width`, `height` |
+| `rhino_calculate_rt60` | Read | Computes room Sabine and Eyring reverberation time | `volume_m3`, `total_surface_area_m2`, `absorption_coefficients` |
+| `rhino_pachyderm_open_ui` | Action | Opens Pachyderm Acoustic Simulation UI panel | — |
+
+---
+
+## Python SDK Examples
+
+The toolkit includes a lightweight Python client (`rhino_client.py`) that can be used directly in Python scripts:
+
+```python
+from rhino_client import RhinoClient
+
+client = RhinoClient()
+
+# Check bridge status
+status = client.get_status()
+print(f"Connected: {status['status']}")
+
+# Create a box
+box = client.create_geometry("box", origin=[0, 0, 0], size=[20, 10, 5])
+print("Created Box GUID:", box["created_ids"][0])
+
+# Execute RhinoCommon code
+res = client.execute_python("""
+import rhinoscriptsyntax as rs
+circle_id = rs.AddCircle([0, 0, 0], 25.0)
+result = f"Circle GUID: {circle_id}"
+""")
+print(res["result"])
+```
+
+Explore runnable examples in the [`examples/`](./examples/) folder:
+- [`01_check_connection.py`](./examples/01_check_connection.py) — Connect and inspect document properties.
+- [`02_create_geometry.py`](./examples/02_create_geometry.py) — Create parametric boxes, cylinders, and spheres.
+- [`03_query_objects_and_layers.py`](./examples/03_query_objects_and_layers.py) — Query and filter layers and objects.
+- [`04_run_rhino_python.py`](./examples/04_run_rhino_python.py) — Execute Python code dynamically inside Rhino.
+
+---
+
+## Testing & Verification
+
+Run the comprehensive end-to-end test suite:
+
+```bash
+python test_backend.py
+```
+
+The test suite validates:
+1. REST bridge connection and status checks.
+2. Document metadata extraction.
+3. Layer listing and hierarchy queries.
+4. Object queries with filtering.
+5. Parametric geometry creation and GUID tracking.
+6. Object selection and retrieval.
+7. Dynamic Python execution and output capture.
+8. Rhino command line execution.
+9. Viewport image capture.
+10. Object deletion and cleanup.
+11. FastMCP server async tool bindings.
+
+---
+
+## Repository Structure
+
+```text
+rhino-ai-mcp/
+├── .gitignore               # Excludes virtual environments, caches, and local archives
+├── LICENSE                  # MIT License
+├── README.md                # Project documentation and setup guide
+├── pyproject.toml           # Standard Python packaging configuration
 ├── requirements.txt         # Package dependencies
-├── GEMINI.md                # Agent instruction & operational context
-└── README.md                # Documentation & setup guide
+├── mcp_server.py            # FastMCP Server (stdio JSON-RPC for AI clients)
+├── rhino_bridge.py          # Live bridge daemon (runs inside Rhino 8 / 9)
+├── rhino_client.py          # Python SDK & CLI client
+├── run_backend.py           # Standalone headless runner
+├── test_backend.py          # Comprehensive test suite (13/13 passing)
+├── test_connection.py       # Quick bridge connection check
+├── test_rhino_exec.py       # Python execution verification script
+├── examples/                # Ready-to-run Python examples
+│   ├── 01_check_connection.py
+│   ├── 02_create_geometry.py
+│   ├── 03_query_objects_and_layers.py
+│   └── 04_run_rhino_python.py
+└── mcp_schemas/             # Tool definitions and documentation
 ```
+
+---
+
+## Contributing
+
+Contributions are welcome! Please open an issue or submit a pull request for improvements, bug fixes, or new MCP tool integrations.
+
+---
+
+## License
+
+This project is licensed under the **MIT License**. See the [LICENSE](./LICENSE) file for details.
+
+Copyright &copy; 2026 Ziad Amr.
